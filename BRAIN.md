@@ -864,3 +864,14 @@ combined REAL n=0, control n=10 −$0.15/exit → NO edge proven (protocol gate 
 **DON'T:** go live on mood. The harness exists precisely so the decision is evidence-gated.
 **DO:** run `python3 live_harness.py` when a paper lock opens; fill manually; the gate fires
 LOUD (arb_track GRADUATE alert) when combined n hits 30 with CI>0.
+
+## Basket scalp monitor — the honest "scalp" task (2026-08-12)
+Predictive scalp legs are ALL dead (92 legs, Strategy Graveyard). The only honest scalp is
+EXITING a structural lock EARLY — freeing NOTIONAL for the next lock instead of riding months
+to resolution (current open lock resolves end-of-2026). `basket_scalp.py` re-prices open locks
+on the LIVE book each cycle and flags when selling now realizes >= the booked edge NET of the
+exit taker fee. Read-only, never touches basket_paper_book.json (graduation track stays
+hold-to-resolution). Wired after basket_paper in the watchdog (run_timeout 60).
+Live verdict on the open lock: HOLD — booked +1.1%, live-exit -1.2% (gross +1.2% − 2.42% exit
+fee) because the field hasn't converged (Σbid 0.978, no winner yet). A scalp only fires once a
+winner emerges and Σbid nears 1 with the exit fee cleared.

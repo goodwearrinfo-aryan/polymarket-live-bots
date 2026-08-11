@@ -313,6 +313,10 @@ while true; do
     # basket_arb paper book: enter new verified locks, settle resolved, accumulate the
     # n≥30 track record that graduates basket arb (the lead structural edge). Read-only.
     run_timeout 120 "$PY" "$DIR/basket_paper.py" >> "$DIR/basket_paper.log" 2>&1 || true
+    # basket_scalp: EARLY-EXIT scalp watch on open locks (read-only, reads the fresh book).
+    # Flags when an open lock can exit early at >= its booked edge, freeing NOTIONAL
+    # for the next lock. Graduation track stays hold-to-resolution. Cheap.
+    run_timeout 60 "$PY" "$DIR/basket_scalp.py" >> "$DIR/basket_scalp.log" 2>&1 || true
     # analyst DATA GATE (v5): for markets that resolve on a fetchable series (crypto klines,
     # IMF PortWatch), pull the actual data + flag settled-but-mispriced ARB markets. Read-only,
     # fail-soft alert on the ARB kind only. -> analyst_data_gate_log.jsonl + Vault/Reports/.
