@@ -879,3 +879,8 @@ winner emerges and Σbid nears 1 with the exit fee cleared.
   fires ONCE per slug when scalp opens, re-arms when it closes (state: .basket_scalp_seen.json).
   Watchdog runs `basket_scalp.py --alert`. NOTE: OpenWA gateway currently DOWN (conn refused)
   → fail-soft keeps the bot alive; alerts resume when the gateway is back.
+**ALERT CHANNEL STATE (2026-08-12):** OpenWA is DELETED from disk (repo, session creds,
+plist all gone — only openwa.key survives). WhatsApp stays down (skip — ban-risk on business #).
+iMessage channel is LIVE and verified (notify() → osascript → Messages, ok:true) — basket_scalp
+and arb_track alerts reach krisharyan@icloud.com / +918449447444 via iMessage regardless. Do NOT
+re-standup OpenWA on the business number without Aryan's explicit call.
