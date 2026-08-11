@@ -265,9 +265,11 @@ def _extract_json(text):
     return json.loads(text[s:e + 1])
 
 
-def judge(system, user, schema_hint=None, temperature=0.1, retries=2):
+def judge(system, user, schema_hint=None, temperature=0.1, retries=2, timeout=300, max_tokens=None):
     """For verdict-style agents: returns a parsed dict. schema_hint = a JSON shape string
-    appended to the prompt so the model returns parseable JSON (no tool-calling needed)."""
+    appended to the prompt so the model returns parseable JSON (no tool-calling needed).
+    timeout/max_tokens pass through to chat() — callers with BIG prompts should set a
+    decisive cap so one slow provider can't stall the whole agent (see leg_gauntlet)."""
     sys_full = system
     if schema_hint:
         sys_full += (f"\n\nReturn ONLY a JSON object of this shape, nothing else:\n{schema_hint}")
@@ -275,7 +277,8 @@ def judge(system, user, schema_hint=None, temperature=0.1, retries=2):
     for _ in range(retries + 1):
         try:
             return _extract_json(chat([{"role": "system", "content": sys_full},
-                                       {"role": "user", "content": user}], temperature=temperature))
+                                       {"role": "user", "content": user}],
+                                      temperature=temperature, timeout=timeout, max_tokens=max_tokens))
         except (ValueError, json.JSONDecodeError, KeyError) as e:
             last = e
             temperature = 0.0  # tighten on retry

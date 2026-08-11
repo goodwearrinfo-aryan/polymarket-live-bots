@@ -135,7 +135,8 @@ def design(angle, desc, ground):
               '"keyless":bool,"kind":"structural|data|mechanical|predictive","resolving_data":str,'
               '"why_not_dead":str,"est_edge":str,"capacity_hint":str}]}')
     try:
-        r = llm_client.judge(system=DESIGNER_SYS, user=user, schema_hint=schema)
+        r = llm_client.judge(system=DESIGNER_SYS, user=user, schema_hint=schema,
+                             timeout=150, max_tokens=1500)
         cands = (r or {}).get("candidates") or []
         for c in cands:
             c["angle"] = angle
@@ -154,7 +155,8 @@ def kill(cand, ground):
               'resolution-mismatch","lands":bool,"confidence":int,"why":str}],'
               '"survives":bool,"binding":str,"summary":str}')
     try:
-        v = llm_client.judge(system=KILLER_SYS, user=user, schema_hint=schema)
+        v = llm_client.judge(system=KILLER_SYS, user=user, schema_hint=schema,
+                             timeout=150, max_tokens=1500)
         if not isinstance(v, dict):
             return None
         # Defensive: survives ONLY if the model says so AND no lens lands.
