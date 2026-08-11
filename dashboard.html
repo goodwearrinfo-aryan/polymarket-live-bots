@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polymarket — Tasks</title>
+<style>
+  :root{--bg:#faf9f5;--card:#fff;--ink:#141413;--mut:#8c8c8a;--accent:#D97757;--bd:#e5e4df;--sec:#F5F4EF}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--ink);padding:24px;line-height:1.5}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--bd)}
+  h1{font-size:1.4rem;font-weight:600}
+  .sub{font-size:13px;color:var(--mut);margin-top:2px}
+  button{background:var(--card);color:var(--ink);border:1px solid var(--bd);padding:9px 16px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;font-family:inherit}
+  button:hover{background:var(--sec)}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .board{display:flex;gap:20px;overflow-x:auto;align-items:flex-start}
+  .col{background:var(--sec);border-radius:12px;min-width:300px;max-width:300px;padding:14px}
+  .col h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:12px;display:flex;justify-content:space-between}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(20,20,19,.04)}
+  .card .t{display:flex;gap:10px;align-items:flex-start}
+  .cb{width:18px;height:18px;min-width:18px;border:2px solid var(--bd);border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-top:1px}
+  .cb.on{background:var(--accent);border-color:var(--accent)}
+  .cb.on::after{content:'';width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-bottom:2px}
+  .ti{font-size:14px;font-weight:500}
+  .ti.done{text-decoration:line-through;color:var(--mut)}
+  .nt{font-size:12.5px;color:var(--mut);margin:6px 0 0 28px}
+  .subs{margin:8px 0 0 28px;font-size:12.5px;color:#5c5c5a}
+  .su{display:flex;gap:7px;padding:2px 0}
+  .su .cb{width:15px;height:15px;min-width:15px}
+  .empty{text-align:center;padding:60px;color:var(--mut)}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Polymarket — Tasks</h1><div class="sub" id="path">No file loaded</div></div>
+  <div style="display:flex;gap:10px">
+    <button id="open">Open TASKS.md</button>
+    <button id="reload" disabled>Reload</button>
+    <button id="save" class="primary" disabled>Save</button>
+  </div>
+</header>
+<div class="board" id="board"><div class="empty" id="empty">Click <b>Open TASKS.md</b> and pick the file in your polymarket folder.</div></div>
+<div class="toast" id="toast"></div>
+<script>
+let handle=null, model=[], dirty=false;
+const $=id=>document.getElementById(id), board=$('board');
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),1800);}
+
+function parse(md){
+  const secs=[]; let cur=null, task=null;
+  for(const line of md.split('\n')){
+    const h=line.match(/^##\s+\*{0,2}(.+?)\*{0,2}\s*$/);
+    if(h){ if(task&&cur){cur.tasks.push(task);task=null;} cur={name:h[1].trim(),tasks:[]}; secs.push(cur); continue; }
+    const m=line.match(/^- \[([ xX])\]\s*(.*)$/);
+    if(m&&cur){ if(task)cur.tasks.push(task);
+      let txt=m[2],title=txt,note='';
+      const b=txt.match(/^(?:~~)?\*\*(.+?)\*\*(?:~~)?(.*)$/);
+      if(b){title=b[1];note=b[2].replace(/^\s*-\s*/,'').replace(/\s*\(\d{4}-\d\d-\d\d\)\s*$/,'').trim();}
+      task={title,note,done:m[1].toLowerCase()==='x',subs:[]}; continue; }
+    const s=line.match(/^\s+- \[([ xX])\]\s*(.*)$/);
+    if(s&&task){ task.subs.push({text:s[2],done:s[1].toLowerCase()==='x'}); }
+  }
+  if(task&&cur)cur.tasks.push(task);
+  return secs;
+}
+function toMd(){
+  let md='# Tasks\n';
+  for(const s of model){ md+=`\n## ${s.name}\n`;
+    for(const t of s.tasks){ const cb=t.done?'[x]':'[ ]';
+      const title=t.done?`~~${t.title}~~`:`**${t.title}**`;
+      md+=`- ${cb} ${t.done?title:'**'+t.title+'**'}${t.note?` - ${t.note}`:''}\n`;
+      for(const su of t.subs) md+=`  - ${su.done?'[x]':'[ ]'} ${su.text}\n`;
+    }
+  }
+  return md.trimEnd()+'\n';
+}
+function render(){
+  board.innerHTML='';
+  if(!model.length){board.innerHTML='<div class="empty">No sections found.</div>';return;}
+  model.forEach((s,si)=>{
+    const col=document.createElement('div');col.className='col';
+    col.innerHTML=`<h2><span>${s.name}</span><span>${s.tasks.length}</span></h2>`;
+    s.tasks.forEach((t,ti)=>{
+      const c=document.createElement('div');c.className='card';
+      let h=`<div class="t"><span class="cb ${t.done?'on':''}" data-s="${si}" data-t="${ti}"></span><span class="ti ${t.done?'done':''}">${esc(t.title)}</span></div>`;
+      if(t.note)h+=`<div class="nt">${esc(t.note)}</div>`;
+      if(t.subs.length){h+='<div class="subs">';t.subs.forEach((su,ui)=>{h+=`<div class="su"><span class="cb ${su.done?'on':''}" data-s="${si}" data-t="${ti}" data-u="${ui}"></span><span class="${su.done?'done':''}">${esc(su.text)}</span></div>`;});h+='</div>';}
+      c.innerHTML=h;col.appendChild(c);
+    });
+    board.appendChild(col);
+  });
+  board.querySelectorAll('.cb').forEach(cb=>cb.addEventListener('click',()=>{
+    const si=+cb.dataset.s,ti=+cb.dataset.t,ui=cb.dataset.u;
+    if(ui===undefined)model[si].tasks[ti].done=!model[si].tasks[ti].done;
+    else model[si].tasks[ti].subs[+ui].done=!model[si].tasks[ti].subs[+ui].done;
+    dirty=true;$('save').disabled=false;render();
+  }));
+}
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+async function load(){
+  const f=await handle.getFile(); model=parse(await f.text());
+  $('path').textContent=handle.name; $('reload').disabled=false; $('save').disabled=true; dirty=false; render();
+}
+$('open').addEventListener('click',async()=>{
+  try{ [handle]=await window.showOpenFilePicker({types:[{description:'Markdown',accept:{'text/markdown':['.md']}}]}); await load(); toast('Loaded'); }
+  catch(e){}
+});
+$('reload').addEventListener('click',async()=>{ if(dirty&&!confirm('Discard unsaved changes?'))return; await load(); toast('Reloaded'); });
+$('save').addEventListener('click',async()=>{
+  const w=await handle.createWritable(); await w.write(toMd()); await w.close();
+  dirty=false;$('save').disabled=true; toast('Saved');
+});
+</script>
+</body>
+</html>

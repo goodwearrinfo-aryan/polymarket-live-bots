@@ -1,0 +1,15 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Scalp Lab — Paper Charts</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>body{font-family:system-ui;background:#0d1117;color:#e6edf3;margin:24px}
+.card{background:#161b22;border:1px solid #2a323d;border-radius:12px;padding:18px;margin-bottom:20px}
+h2{margin:0 0 4px}small{color:#8b949e}</style></head><body>
+<h1>Scalp Lab — paper P&amp;L (cumulative)</h1>
+<div class="card"><h2>DIP — buy 0.30–0.40, sell 0.49</h2><small>the midline-style bet</small><canvas id="dip"></canvas></div>
+<div class="card"><h2>SCALP — buy 0.92–0.97, +2¢ target</h2><small>the 98% win-rate idea</small><canvas id="scalp"></canvas></div>
+<script>const D={"dip": [["17:36:00", -0.5316], ["18:07:16", -1.3722], ["18:20:49", -1.9648], ["18:41:46", -2.5401], ["19:12:38", -2.2284], ["11:32:02", -2.5776], ["12:35:28", -2.3341]], "scalp": [["18:16:34", 0.0149], ["22:58:36", 0.0196], ["00:03:50", 0.0293], ["01:58:46", 0.0448]]};
+function plot(id,pts,color){new Chart(document.getElementById(id),{type:'line',
+data:{labels:pts.map(p=>p[0]),datasets:[{label:'cum P&L ($)',data:pts.map(p=>p[1]),
+borderColor:color,backgroundColor:color+'33',fill:true,tension:.2,pointRadius:2}]},
+options:{plugins:{legend:{display:false}},scales:{y:{grid:{color:'#2a323d'}},x:{grid:{color:'#2a323d'}}}}});}
+plot('dip',D.dip,'#f7931a');plot('scalp',D.scalp,'#3fb950');</script></body></html>

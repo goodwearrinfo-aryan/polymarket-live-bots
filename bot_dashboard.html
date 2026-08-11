@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Bot Portfolio</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { font-size: 28px; margin-bottom: 20px; text-align: center; }
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .bot-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .bot-card:hover { border-color: #64748b; }
+        .bot-name { font-size: 14px; color: #94a3b8; margin-bottom: 10px; font-weight: 600; }
+        .pnl { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .pnl.positive { color: #10b981; }
+        .pnl.negative { color: #ef4444; }
+        .pnl.neutral { color: #f59e0b; }
+        .capital { font-size: 12px; color: #64748b; }
+        .wr { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            height: 400px;
+        }
+        .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
+        canvas { max-height: 360px; }
+        .footer {
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 40px;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 12px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-color { width: 12px; height: 12px; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Polymarket Portfolio Dashboard</h1>
+
+        <div class="status-bar" id="status-bar"></div>
+
+        <div class="charts">
+            <div class="chart-container">
+                <div class="chart-title">Portfolio P&L Over Time</div>
+                <canvas id="portfolio-chart"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Per-Bot Capital Allocation</div>
+                <canvas id="allocation-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="charts">
+            <div class="chart-container">
+                <div class="chart-title">Individual Bot P&L</div>
+                <canvas id="bot-pnl-chart"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Win Rate by Bot</div>
+                <canvas id="wr-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Auto-refresh every 30 seconds | Last updated: <span id="last-update">never</span></p>
+            <p>Paper trading only • Polymarket • Portfolio: $10,000 USDC</p>
+        </div>
+    </div>
+
+    <script>
+        const BOTS = ["nearres", "ladderarb", "fade", "fastfade", "newstrategy"];
+        const COLORS = {
+            nearres: "#3b82f6",
+            ladderarb: "#10b981",
+            fade: "#f59e0b",
+            fastfade: "#ef4444",
+            newstrategy: "#8b5cf6"
+        };
+
+        // Mock data (in production, load from bot state files)
+        const mockData = {
+            nearres: { pnl: 120, capital: 4000, wr: 0.90, trades: 55 },
+            ladderarb: { pnl: 1123, capital: 3000, wr: 0.82, trades: 11 },
+            fade: { pnl: 100, capital: 1500, wr: 0.67, trades: 12 },
+            fastfade: { pnl: -77, capital: 1000, wr: 0.62, trades: 24 },
+            newstrategy: { pnl: 0, capital: 500, wr: 0.0, trades: 0 }
+        };
+
+        function renderStatusBar() {
+            const html = BOTS.map(bot => {
+                const data = mockData[bot];
+                const pnlPct = (data.pnl / data.capital) * 100;
+                const pnlClass = data.pnl > 0 ? "positive" : data.pnl < 0 ? "negative" : "neutral";
+                return `
+                    <div class="bot-card">
+                        <div class="bot-name">${bot}</div>
+                        <div class="pnl ${pnlClass}">${data.pnl > 0 ? '+' : ''}$${data.pnl.toFixed(0)}</div>
+                        <div class="capital">${data.capital} USDC (${(data.capital/10000*100).toFixed(0)}%)</div>
+                        <div class="wr">WR: ${(data.wr*100).toFixed(0)}% (${data.trades} trades)</div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('status-bar').innerHTML = html;
+        }
+
+        function createPortfolioChart() {
+            const ctx = document.getElementById('portfolio-chart').getContext('2d');
+            const days = Array.from({length: 30}, (_, i) => `Day ${i+1}`);
+            const portfolioPnL = Array.from({length: 30}, (_, i) => {
+                return 1000 + Math.sin(i/10) * 500 + Math.random() * 200;
+            });
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: days,
+                    datasets: [{
+                        label: 'Total P&L',
+                        data: portfolioPnL,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+                    }
+                }
+            });
+        }
+
+        function createAllocationChart() {
+            const ctx = document.getElementById('allocation-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: BOTS.map(b => b + '\n$' + mockData[b].capital),
+                    datasets: [{
+                        data: BOTS.map(b => mockData[b].capital),
+                        backgroundColor: BOTS.map(b => COLORS[b]),
+                        borderColor: '#1e293b',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', padding: 15 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createBotPnLChart() {
+            const ctx = document.getElementById('bot-pnl-chart').getContext('2d');
+            const pnls = BOTS.map(b => mockData[b].pnl);
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: BOTS,
+                    datasets: [{
+                        label: 'P&L ($)',
+                        data: pnls,
+                        backgroundColor: BOTS.map(b => pnls[BOTS.indexOf(b)] >= 0 ? '#10b981' : '#ef4444'),
+                        borderRadius: 4,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { drawBorder: false } }
+                    }
+                }
+            });
+        }
+
+        function createWRChart() {
+            const ctx = document.getElementById('wr-chart').getContext('2d');
+            const wrs = BOTS.map(b => mockData[b].wr * 100);
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: BOTS,
+                    datasets: [{
+                        label: 'Win Rate (%)',
+                        data: wrs,
+                        backgroundColor: BOTS.map(b => COLORS[b]),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { min: 0, max: 100, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { drawBorder: false } }
+                    }
+                }
+            });
+        }
+
+        function updateTime() {
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Initialize
+        renderStatusBar();
+        createPortfolioChart();
+        createAllocationChart();
+        createBotPnLChart();
+        createWRChart();
+        updateTime();
+
+        // Refresh every 30s
+        setInterval(() => {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>

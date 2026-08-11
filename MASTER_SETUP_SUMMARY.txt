@@ -1,0 +1,154 @@
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║         7-DAY STOP-LOSS TEST — COMPLETE AUTONOMOUS SETUP                  ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+TEST TIMELINE
+═════════════════════════════════════════════════════════════════════════════
+Start:       2026-07-23 22:33 UTC (stops disabled)
+End:         2026-07-30 22:33 UTC (stops restored or extended)
+Monitoring:  Daily 09:00 UTC (autonomous via launchd)
+Decision:    2026-07-30 22:30 UTC (automated verdict script)
+
+CORE INFRASTRUCTURE
+═════════════════════════════════════════════════════════════════════════════
+✅ Stop-Loss Disabled       All *_stop = 1.0, backup: scalp_lab.py.backup.1784830289
+✅ Portfolio State          12 open positions (windowshutrand×5, newsmove×3, etc)
+✅ Resolved Winners         5 ready to close (+$4.05 capital freed)
+✅ Backtest Baseline        -$369.43 P&L, 31% WR, -$0.159/trade (allin control)
+
+DAILY MONITORING (09:00 UTC AUTO-RUN)
+═════════════════════════════════════════════════════════════════════════════
+Script:      daily_test_check_ollama.py
+Judge:       Local ollama (llama3.1:8b, $0 cost)
+Output:      SEVEN_DAY_TEST_LOG.json (append-only)
+Logs:        /tmp/daily-test-check.log
+Verdicts:    🟢 Green / 🟡 Yellow / 🔴 Red (colored)
+
+GITHUB INTEGRATION (DAILY AUTO-SYNC)
+═════════════════════════════════════════════════════════════════════════════
+Repo:        github.com/goodwearrinfo-aryan/edge-bots
+Fetch:       Pulls latest bot strategies (IMDEA, warproxxx, ent0n29, etc)
+Push:        Commits logs + verdicts to GitHub
+Strategies:  Compared daily vs top 5 GitHub bots
+
+10 OLLAMA AGENTS (AUTONOMOUS TWEAKS, ZERO COST)
+═════════════════════════════════════════════════════════════════════════════
+1. Alert Monitor       → Decides what warrants Slack/email alert
+2. Stress Test         → Simulates BTC -20%, warns on liquidation
+3. Strategy Mutate     → Generates 3 variants to test in parallel
+4. Auto Prune          → Kills underperformers (WR<15%, n>=10)
+5. Hot Reload          → Decides if strategy swap is safe mid-test
+6. GitHub Issues       → Auto-creates issues on RED verdicts
+7. Dashboard Gen       → Generates shareable HTML report daily
+8. Sharpe Tracker      → Tracks edge improvement day-over-day
+9. Telegram Bot        → Sends verdicts to your phone
+10. A/B Test          → Splits positions, tests stops vs no-stops
+
+All 10 run daily via ollama (local, $0), integrated into daily check.
+
+DECISION FRAMEWORK (2026-07-30 22:30 UTC)
+═════════════════════════════════════════════════════════════════════════════
+PASS:
+  ✓ Live Sharpe > -$0.159/trade
+  ✓ Win rate improved >1pp (>32%)
+  ✓ Stop-bleed saved >$50 total
+  → Close winners, add Fed basket, retire toxics, reallocate capital
+
+NEUTRAL:
+  Mixed results (edge good, volume low)
+  → Extend test 7 more days (until 2026-08-06)
+
+FAIL:
+  Live Sharpe ≤ -$0.159/trade
+  Win rate degraded <30%
+  → Restore stops from backup, investigate, redesign
+
+CAPITAL MANAGEMENT
+═════════════════════════════════════════════════════════════════════════════
+Resolved Winners to Close:  5 positions, +$4.05 freed
+  - allin (Knicks vs Spurs): +$1.6667
+  - coinflip (LoL Karmine): +$1.0833
+  - momentum (Seoul Election): +$0.8709
+  - nearres (Aurora CS): +$0.1749
+  - nearres (T1 Gen.G): +$0.2588
+
+Toxic Strategies to Retire:
+  - newsmove (18.8% WR)
+  - coinflip (-$66 total)
+  - microscalp (0% WR)
+
+Fed Basket Allocation:
+  - 5 legs, 0.95% edge
+  - $4-5 paper capital
+  - Deploys post-test if PASS verdict
+
+FILES DEPLOYED
+═════════════════════════════════════════════════════════════════════════════
+Core:
+  • SEVEN_DAY_TEST_MONITOR.md          Monitoring checklist + decision tree
+  • daily_test_check_ollama.py         Daily metrics + ollama verdict
+  • test_decision_2026_07_30.py        Automated verdict + allocation
+
+GitHub:
+  • github_sync.py                     Fetch bot strategies, push results
+  • GITHUB_INTEGRATION_LIVE.md         GitHub sync documentation
+  • GITHUB_BOTS_BENCHMARK.md           Comparison vs top 5 bots
+
+Ollama Agents:
+  • ollama_agents.py                   10 autonomous agents (tweak framework)
+  • OLLAMA_AGENTS_10TWEAKS.md          Agent documentation
+
+Bookkeeping:
+  • FINAL_TEST_SETUP.md                Launch checklist + overview
+  • CLOSE_RESOLVED_WINNERS.md          Winner closure procedure
+  • STOP_LOSS_DISABLED.txt             Test metadata + re-enable instructions
+  • com.aryan.daily-test-check.plist   Launchd job (auto 09:00 UTC daily)
+
+AUTOMATION CHECKLIST
+═════════════════════════════════════════════════════════════════════════════
+✅ Launchd job loaded       → Runs daily_test_check_ollama.py at 09:00 UTC
+✅ GitHub repo initialized  → edge-bots cloned, structure created
+✅ Bot strategies fetched   → IMDEA, warproxxx, ent0n29, Benjam1nCup, skharchikov
+✅ Ollama agents tested     → All 10 agents respond correctly
+✅ Daily sync working       → Logs pushed to GitHub, verified
+✅ Decision script ready    → test_decision_2026_07_30.py prepared
+✅ Capital allocation ready → Fed basket spec, winner closure procedure ready
+
+LIVE VERDICTS (Day 1)
+═════════════════════════════════════════════════════════════════════════════
+Edge per-trade:    $0.1900 ✓ (vs -$0.159 baseline)
+Open positions:    12 (stable)
+Verdict:           🟡 YELLOW (mixed signals — edge good, volume low)
+Next 24h watch:    Trade volume, unrealized P&L trends
+
+WHAT'S AUTONOMOUS (ZERO HUMAN INPUT)
+═════════════════════════════════════════════════════════════════════════════
+✅ Daily metrics collection
+✅ Ollama judgment (verdict color)
+✅ GitHub bot strategy fetching
+✅ GitHub results pushing
+✅ Alert generation (Slack/email)
+✅ Stress testing (crash scenarios)
+✅ Strategy mutation (variant generation)
+✅ Leg pruning (underperformer killing)
+✅ Strategy hot-reload (mid-test swap safety)
+✅ GitHub issues (auto-create on failures)
+✅ Dashboard generation (HTML reports)
+✅ Sharpe tracking (improvement trends)
+✅ Telegram alerts (phone notifications)
+✅ A/B testing (parallel stops vs no-stops)
+
+STATUS: READY TO LAUNCH
+═════════════════════════════════════════════════════════════════════════════
+
+All systems operational. Test is autonomous and GitHub-connected.
+10 ollama agents running zero-cost tweaks daily.
+Decision verdicts automated for 2026-07-30.
+
+→ No human intervention needed until verdict day.
+
+═════════════════════════════════════════════════════════════════════════════
+

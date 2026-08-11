@@ -1,0 +1,25 @@
+STOP-LOSS DISABLED: 7-Day Test
+==============================
+
+Disabled: 2026-07-23 22:33
+Re-enable: 2026-07-30 22:33
+
+All *_stop parameters set to 1.0 (effectively disabled).
+Watchdog will reload config automatically.
+
+To RE-ENABLE after 7 days:
+  cd ~/Documents/polymarket
+  git diff scalp_lab.py | grep "1.0," | sed 's/1.0,/ORIGINAL_VALUE/' > STOPS_TO_RESTORE.txt
+  Then manually restore original values from backup:
+  cp scalp_lab.py.backup.* scalp_lab.py (restore from latest backup)
+  
+Original stop values backed up in: scalp_lab.py.backup.*
+
+Test hypothesis: Removing stop-loss will allow positions to run longer and capture
+larger moves, potentially improving Sharpe and reducing false exits that were cutting
+winners early. Validate after 7 days with backtest_edge.py.
+
+Positions to monitor:
+- Toxic strategies already disabled: allin, coinflip, microscalp, cryptobull, dipladder
+- Watch: newsmove (worst performer), nearterm (tighten stops after re-enable)
+- Hold: windowshutrand, BTC range book

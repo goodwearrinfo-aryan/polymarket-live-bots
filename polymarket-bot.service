@@ -1,0 +1,17 @@
+[Unit]
+Description=Polymarket paper bot watchdog (scalp_lab + scalp_engine, paper only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/polymarket
+ExecStart=/bin/bash /root/polymarket/watchdog_loop.sh
+Restart=always
+RestartSec=10
+# keep a bounded log; journalctl also captures everything
+StandardOutput=append:/root/polymarket/watchdog.service.log
+StandardError=append:/root/polymarket/watchdog.service.log
+
+[Install]
+WantedBy=multi-user.target

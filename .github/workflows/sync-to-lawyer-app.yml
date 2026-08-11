@@ -1,0 +1,46 @@
+name: Sync lawyer core to lawyer-app
+
+# Replaces the manual local sync_from_polymarket.sh: on every push that
+# touches lawyer.py / lawyer_ui.py, copy them into lawyer-app (the Railway
+# deploy repo), reapply the two cloud-only patches, and push if changed.
+# lawyer-app auto-redeploys on Railway from its default branch.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lawyer.py'
+      - 'lawyer_ui.py'
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout polymarket
+        uses: actions/checkout@v4
+        with:
+          path: polymarket
+
+      - name: Checkout lawyer-app
+        uses: actions/checkout@v4
+        with:
+          repository: goodwearrinfo-aryan/lawyer-app
+          token: ${{ secrets.LAWYER_APP_PUSH_TOKEN }}
+          path: lawyer-app
+
+      - name: Copy + patch for cloud deploy
+        run: python3 polymarket/.github/scripts/patch_for_cloud.py polymarket lawyer-app
+
+      - name: Commit and push if changed
+        working-directory: lawyer-app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- lawyer.py lawyer_ui.py; then
+            echo "No changes to sync."
+            exit 0
+          fi
+          git add lawyer.py lawyer_ui.py
+          git commit -m "chore: sync lawyer.py/lawyer_ui.py from polymarket (automated)"
+          git push

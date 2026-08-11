@@ -1,0 +1,16 @@
+[Unit]
+Description=Polymarket lock event endpoint (serves basket_locks.jsonl to the Mac relay) — read-only
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/polymarket
+ExecStart=/usr/bin/python3 -u /root/polymarket/lock_server.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/lock-server.log
+StandardError=append:/var/log/lock-server.log
+
+[Install]
+WantedBy=multi-user.target

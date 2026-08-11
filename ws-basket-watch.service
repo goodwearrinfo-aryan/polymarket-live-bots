@@ -1,0 +1,18 @@
+[Unit]
+Description=Polymarket real-time basket-arb lock watcher (CLOB websocket) — PAPER/DETECTION ONLY
+Documentation=file:///root/polymarket/ws_basket_watch.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/polymarket
+ExecStart=/usr/bin/python3 -u /root/polymarket/ws_basket_watch.py
+Restart=always
+RestartSec=10
+# SEPARATE from polymarket-bot.service (the copy bot). Detection only — no orders, no keys.
+StandardOutput=append:/var/log/ws-basket-watch.log
+StandardError=append:/var/log/ws-basket-watch.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>control_ok</key>
+	<true/>
+	<key>gate_ready</key>
+	<false/>
+	<key>timestamp</key>
+	<string>2026-06-17T08:59</string>
+	<key>top_legs</key>
+	<string>['ALLIN', 'COINFLIP', 'MICROSCALP']</string>
+	<key>total_pnl</key>
+	<real>-336.69</real>
+</dict>
+</plist>

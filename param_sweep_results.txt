@@ -1,0 +1,12 @@
+esports markets to sweep: 110
+  fetched 30/110
+  fetched 60/110
+  fetched 90/110
+cached series: 110
+
+A baseline t9/s3/4h/[.88,.95]: n=67 wr=61% pnl=$+1.79 avg=$+0.0267 CI[-0.0037,+0.0559]
+B ride    t-/s3/4h/[.88,.95]: n=67 wr=61% pnl=$+3.13 avg=$+0.0467 CI[+0.0114,+0.0804] ✓
+C pure    t-/s-/4h/[.88,.95]: n=67 wr=94% pnl=$+2.18 avg=$+0.0325 CI[-0.0995,+0.1357]
+D tight   t9/s3/4h/[.90,.95]: n=62 wr=66% pnl=$+2.54 avg=$+0.0409 CI[+0.0094,+0.0715] ✓
+E short   t9/s3/2h/[.88,.95]: n=66 wr=62% pnl=$+1.90 avg=$+0.0288 CI[-0.0014,+0.0584]
+F long    t9/s3/8h/[.88,.95]: n=67 wr=63% pnl=$+2.07 avg=$+0.0308 CI[+0.0003,+0.0603] ✓

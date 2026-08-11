@@ -1,0 +1,9 @@
+scope,category,n,win_pct,pnl_usd
+all_legs,other,464,39.7,-37.09
+all_legs,sports,209,50.2,-23.85
+all_legs,crypto,55,23.6,-5.22
+all_legs,politics,117,25.6,-9.91
+signal_legs,other,18,88.9,1.04
+signal_legs,sports,6,100.0,0.5
+signal_legs,politics,4,50.0,0.3
+signal_legs,crypto,2,100.0,0.92

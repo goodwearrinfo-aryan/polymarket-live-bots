@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.aryan.info-swarm-awake</string>
+    <!-- caffeinate -i: prevent idle system sleep on ANY power source (AC or battery), so the
+         info-swarm StartInterval fires 24/7 regardless of whether the Mac is plugged in.
+         KeepAlive keeps the assertion up. Tradeoff: drains battery when unplugged. No sudo,
+         reversible (launchctl unload). (Was -s = AC-only, which went dormant on battery.) -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/caffeinate</string>
+        <string>-i</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/info-swarm-awake.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/info-swarm-awake.err</string>
+</dict>
+</plist>
