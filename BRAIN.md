@@ -875,3 +875,7 @@ hold-to-resolution). Wired after basket_paper in the watchdog (run_timeout 60).
 Live verdict on the open lock: HOLD — booked +1.1%, live-exit -1.2% (gross +1.2% − 2.42% exit
 fee) because the field hasn't converged (Σbid 0.978, no winner yet). A scalp only fires once a
 winner emerges and Σbid nears 1 with the exit fee cleared.
+- `--alert`: loud deduped WhatsApp/iMessage (wa_alert.notify, fail-soft) on a NEW scalp —
+  fires ONCE per slug when scalp opens, re-arms when it closes (state: .basket_scalp_seen.json).
+  Watchdog runs `basket_scalp.py --alert`. NOTE: OpenWA gateway currently DOWN (conn refused)
+  → fail-soft keeps the bot alive; alerts resume when the gateway is back.
