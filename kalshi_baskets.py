@@ -10,8 +10,10 @@ Kalshi is a SECOND, independent liquidity pool → more locks, and the two venue
 other (an event priced as a set <$1 here may be >$1 there = a cross-venue lock; that's the
 next variation). PAPER / read-only. No keys, no orders, no state writes to the bot books.
 
-Run:  python3 kalshi_baskets.py            # scan + report locked baskets
+Run:  python3 kalshi_baskets.py            # scan + report locked baskets (episodic, ~5 pages)
       python3 kalshi_baskets.py --all      # report all complete-set events (incl. no lock)
+NOTE: episodic/manual ONLY. Kalshi API is 45-120s/page via the jina fallback (direct host
+blocks this machine) — too slow for the per-cycle watchdog. Not a live monitor.
 """
 import json, sys, os
 from datetime import datetime, timezone
@@ -21,7 +23,8 @@ import edge_common as ec
 MIN_EDGE = 0.01          # 1c locked minimum (NET of the fee estimate)
 FEE_RATE = 0.03          # Kalshi taker fee estimate (conservative mid)
 MIN_LIQ = 0.0            # no liquidity floor for now — report, human decides
-MAX_PAGES = 15           # scan depth for open events
+MAX_PAGES = 5            # episodic manual depth; Kalshi API ~45-120s/page through jina fallback
+                         # (direct host blocks this machine) → NOT suitable for the 60s watchdog
 
 
 def _fmt(p):

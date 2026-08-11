@@ -899,3 +899,8 @@ lock edge. PAPER/read-only.
 right now (dormant = correct, same as Polymarket). The variation is built, correctly guarded,
 and reports honestly. NEXT for this leg: when a liquid exclusive set appears, it'll show up
 here first — wire it into a paper book only after it demonstrates a real fillable lock.
+**Runtime reality (2026-08-12):** Kalshi API is 45–120s PER PAGE through the jina fallback
+(direct host blocks this machine, same reroute as Polymarket). 15-page scan ~15 min → NOT
+fit for the 60s watchdog; removed from the loop. Now episodic/manual only (MAX_PAGES=5).
+A Kalshi lock monitor therefore CANNOT run continuously on this box — revisit only if a
+direct-access path appears (VPN/proxy/CI runner) OR trade it manually on alert.
