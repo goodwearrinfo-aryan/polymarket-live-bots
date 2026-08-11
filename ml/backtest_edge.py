@@ -93,6 +93,18 @@ def main():
     if div_n and (div_pnl / div_n) > 0 and (not n_allin or div_pnl/div_n > allin_pnl/n_allin):
         print(" VERDICT: edge is TRADABLE — divergence is +EV after spread AND beats allin.")
         print("          Next: confirm on a fresh time period, then tiny real money.")
+        # HONEST CROSS-CHECK: this backtest is IN-SAMPLE (group-split on the training
+        # dataset). The OUT-OF-TIME test is the real verdict — if it refuted the edge,
+        # say so here so a reader never trusts the stale banner (experiment closed
+        # 2026-08-11: P(edge>0)=0.035, model AUC 0.478 < price AUC 0.648).
+        try:
+            oot = json.load(open(os.path.join(HERE, "backtest_oot_result.json")))
+            m, p = oot.get("model_auc"), oot.get("price_auc")
+            if m is not None and p is not None and m <= p:
+                print("          ⚠ OUT-OF-TIME REFUTED this: model AUC %.3f <= price AUC %.3f." % (m, p))
+                print("            This in-sample TRADABLE banner is SUPERSEDED — do not act on it.")
+        except Exception:
+            pass
     elif div_n:
         print(" VERDICT: edge does NOT survive costs — +0.067 AUC was statistical, not money.")
         print("          The market's price is already good enough; don't trade this.")
