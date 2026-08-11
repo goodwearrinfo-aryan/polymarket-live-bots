@@ -15,6 +15,14 @@ Full roadmap is in **BUILD_PLAN.md** (this folder). Start there.
 - **Do NOT** churn strategy config on mood or re-litigate closed families. Each change resets the experiment.
 - If revisiting: watch for (a) game-level sports markets, (b) short-dated crypto thresholds, (c) any leg reaching n≥10 with positive CI. Until then the paper system runs as a monitoring harness, not an edge hunt.
 
+## 2026-08-12 — fleet audit + GitHub workflow mirror
+- Audit ("make profitable bots"): every structural-arb bot already exists and runs fresh in the
+  watchdog (basket_paper ~315, dataarb ~320, monoarb ~335, multiarb ~372). Nothing to build —
+  the bottleneck is resolved trades, not code. multiarb does NOT include xvenue (scanner only).
+  Combined read: real n=0 accumulating, control n=10 at −$0.15/exit (honest). Full detail: BRAIN.md.
+- Workflow mirror created: `github.com/goodwearrinfo-aryan/polymarket-live-bots` (public, main) —
+  source + docs only, no runtime state. Re-sync: copy *.py/*.md/*.sh over, commit, push.
+
 ## Running paper system (don't break it)
 - `scalp_lab.py` — 5 legs: fade, fastfade, scalp, allin (control), + (dip & taker = KILLED). Runs via watchdog every ~60s. Hot-reload config: `scalp_engine_config.json`.
 - `scalp_engine.py` — real scalping engine, taker+maker books (taker killed, maker live).

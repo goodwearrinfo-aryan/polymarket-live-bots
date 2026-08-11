@@ -15,13 +15,24 @@ GAMMA_EVENTS = "https://gamma-api.polymarket.com/events"
 KALSHI_EVENTS = "https://api.elections.kalshi.com/trade-api/v2/events"
 
 
+JINA_READER = "https://r.jina.ai/"
+
+
 def _get(url, params=None, tries=3, timeout=20):
+    """GET + parse JSON. Falls back to the r.jina.ai reader proxy when the direct host is
+    blocked (Polymarket gamma/clob direct hosts block this machine — see wiring_keeper)."""
     if params:
         url = url + "?" + urllib.parse.urlencode(params)
     for i in range(tries):
         try:
             req = urllib.request.Request(url, headers=UA)
             return json.load(urllib.request.urlopen(req, timeout=timeout))
+        except Exception:
+            pass
+        # jina fallback: raw JSON via x-respond-with:text (skips the markdown preamble)
+        try:
+            req = urllib.request.Request(JINA_READER + url, headers={**UA, "x-respond-with": "text"})
+            return json.load(urllib.request.urlopen(req, timeout=timeout + 10))
         except Exception as e:
             if i == tries - 1:
                 return None

@@ -1,53 +1,112 @@
-# Polymarket-Live — Structural-Arb Research & Paper System
+# Polymarket Auto Trading Bot
 
-Research monorepo for Polymarket trading. After ~95 evaluated strategies, the honest
-verdict is recorded in `CLAUDE.md`: **predictive taker legs die to calibrated mids.**
-The only edges that structurally survive are non-predictive **structural arbs** — market
-structure mispricings whose profit does not depend on forecasting an outcome.
+An automated trading bot for [Polymarket](https://polymarket.com) that scans prediction markets, finds value bets, and manages positions with take-profit and stop-loss logic.
 
-This repo is the **source + docs** mirror of the live research workspace
-(`~/polymarket-live`). Runtime state (dbs, logs, `*_state.json`, `.jsonl`) is intentionally
-excluded — it lives only on the local machine.
+---
 
-## Hard Rules (whole workspace)
+## Quick Start
 
-1. **Paper only** — no real orders, no API keys in code, no fund movement.
-2. **Optimize dollars, not win rate** — win rate is vanity.
-3. **Controls must lose** — if allin/coinflip controls win, the accounting is buggy.
-4. **≥30 closed real exits AND bootstrap CI > 0** before claiming an edge graduates.
-5. **Don't churn config on mood** — each change resets the experiment.
-
-## The Live System
-
-Everything runs on a watchdog loop (`watchdog_loop.sh`, launchd-managed). The active
-structural-arb legs, all **paper**, hold-to-resolution:
-
-| Leg | File | Edge type | Status |
-|---|---|---|---|
-| Basket arb | `basket_arb.py` / `basket_paper.py` | Locked combinatorial field (Σask < 1) | accumulating n |
-| Data arb | `dataarb.py` + `analyst_data_gate.py` | Settled-but-mispriced (resolving series already determined) | accumulating n |
-| Mono arb | `monoarb.py` | Monotonicity/consistency violations | accumulating n |
-| Cross-venue | `xvenue_arb.py` | Same event cheaper on Kalshi vs Polymarket | scanner |
-| Combined | `multiarb.py` | Theme-clustered combined CI over the arbs | accumulating n |
-
-Fatal-to-track: **zero real exits booked yet** — every leg is in accumulating mode, waiting
-on resolution. Control legs are properly negative (accounting honest).
-
-## Key Docs
-
-- `CLAUDE.md` — project memory; "Where we are — EXPERIMENT CONCLUDED" + do-not-relitigate list
-- `BRAIN.md` — canonical working brain (lessons, graveyard, edge track)
-- `WORKFLOW_AND_BRAIN.md` / `README_WORKFLOW.md` — workflow / runbook
-- `GRADUATION_PROTOCOL.md` — the n≥30 + CI > 0 gate that graduates a leg
-- `PROJECT_MAP.md` — file map
-
-## Local Operations (in `~/polymarket-live`, not this mirror)
+### 1. Install dependencies
 
 ```bash
-python3 multiarb.py once          # combined structural-arb read (basket+data+mono)
-python3 basket_paper.py --report  # basket book + stats
-python3 dataarb.py once           # data-arb leg
-python3 monoarb.py once           # mono-arb leg
-python3 scalp_lab.py once         # single scalp scan (legacy; all dead)
-./watchdog_loop.sh                # keep-alive daemon (launchd managed)
+pip install -r requirements.txt
 ```
+
+### 2. Set up your environment
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and add your **Polygon wallet private key** (the wallet you use on Polymarket).
+
+### 3. Generate API credentials
+
+```bash
+python polymarket_bot.py --setup
+```
+
+This derives your Polymarket CLOB API key from your wallet and saves the credentials to `.env`.
+
+### 4. Run in dry-run mode (safe — no real orders)
+
+```bash
+python polymarket_bot.py --dry-run
+```
+
+Watch the logs. The bot will scan markets, identify value bets, and simulate trades without spending any real money.
+
+### 5. Go live
+
+When you're happy with the strategy, open `polymarket_bot.py` and set:
+
+```python
+"dry_run": False,
+```
+
+Then run:
+
+```bash
+python polymarket_bot.py
+```
+
+---
+
+## Configuration
+
+All settings are in the `CONFIG` dict at the top of `polymarket_bot.py`:
+
+| Setting | Default | Description |
+|---|---|---|
+| `bet_size_usdc` | `5.0` | USDC to stake per trade |
+| `min_probability` | `0.05` | Skip markets below 5% |
+| `max_probability` | `0.95` | Skip markets above 95% |
+| `edge_threshold` | `0.06` | Minimum edge (6%) to place a bet |
+| `take_profit_pct` | `0.25` | Close position at +25% |
+| `stop_loss_pct` | `0.12` | Close position at -12% |
+| `max_open_positions` | `5` | Maximum simultaneous positions |
+| `scan_interval_sec` | `60` | Seconds between market scans |
+| `max_markets_scan` | `50` | Markets to evaluate per scan |
+| `dry_run` | `True` | Simulation mode (no real orders) |
+
+---
+
+## Adding Your Strategy
+
+The bot ships with a placeholder strategy. Open `polymarket_bot.py` and find:
+
+```python
+def estimate_probability(market: dict) -> Optional[float]:
+    # TODO: implement your edge here
+    return None  # returning None skips this market
+```
+
+Return a float between 0 and 1 representing your probability estimate for YES. If it differs from the market price by more than `edge_threshold`, the bot places a bet.
+
+**Example strategies:**
+- News sentiment analysis
+- Statistical base rates
+- External model / API predictions
+- Manual watchlist overrides
+
+---
+
+## Files
+
+| File | Description |
+|---|---|
+| `polymarket_bot.py` | Main bot script |
+| `requirements.txt` | Python dependencies |
+| `.env.example` | Environment variable template |
+| `.env` | Your secrets (never commit this) |
+| `polymarket_bot.log` | Runtime log (created on first run) |
+| `trade_log.json` | Trade history (created on first run) |
+
+---
+
+## Safety Notes
+
+- Always test with `dry_run: True` first
+- Start with small `bet_size_usdc` values
+- Never commit your `.env` file to version control
+- Keep your private key secure — it controls your Polygon wallet
