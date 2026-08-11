@@ -94,7 +94,7 @@ def poly_events(pages=8, per_page=100):
             "closed": "false", "active": "true",
             "limit": per_page, "offset": p * per_page,
         }) or []
-        if not raw:
+        if not isinstance(raw, list) or not raw:
             break
         for ev in raw:
             mkts = ev.get("markets") or []

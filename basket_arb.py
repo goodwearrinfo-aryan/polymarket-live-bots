@@ -126,7 +126,7 @@ def _live_basket_edge(legs, fee_rate=FEE_RATE_DEFAULT):
             "edge": round(max(long_net, short_net), 3)}   # NET-of-fee executable edge
 
 
-def scan_baskets(pages=10):
+def scan_baskets(pages=20):
     """All mutually-exclusive events with their long/short locked edges + exhaustiveness."""
     evs = ec.poly_events(pages=pages)
     out = []

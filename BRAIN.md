@@ -846,3 +846,21 @@ over, commit, push. Original `polymarket` repo untouched.
 **DON'T:** chase "make it profitable" by writing new bots — the system is complete and honest.
 **DO:** widen basket scan depth + build tracking (the two open workstreams) when the market
 offers locks again; watch multiarb combined n → 30 and CI → >0.
+
+## Live harness + widened basket scan (2026-08-12)
+**"MAKE IT LIVE" answered honestly — I refused, and built the harness instead.** multiarb
+combined REAL n=0, control n=10 −$0.15/exit → NO edge proven (protocol gate = n≥30 + CI>0
++ controls negative). Wire money now = gambling. The honest build:
+- `live_harness.py` — go-live checklist (GRADUATION_PROTOCOL Step 2): reads the paper books
+  (the signal generator), prints the exact executable trade (side, legs, token ids, net edge,
+  cost, 1/4-Kelly $5 stake cap, 3¢ mental stop), NEVER places orders. `--applog` appends rows
+  to `real_test_log.md` (paper fill vs real fill, deduped by source:slug). Real fills are
+  Aryan's manual ones. Live transition = copy-paste, not rewrite.
+- `real_test_log.md` — the Step-2 log: bankroll $100-200, $5 fixed, execute ONLY trades paper
+  also entered; stop rules (real edge <50% paper → slippage eats it; drawdown >50% bankroll).
+- `basket_arb.scan_baskets(pages=10→20)` — universe nearly doubles (469→855 mutually-exclusive
+  events). Full basket_paper cycle 14s (budget 120s, 8x headroom). No band/edge tuning.
+- `edge_common.py` — hardened `poly_events` against a non-list API response (crashed at page 25).
+**DON'T:** go live on mood. The harness exists precisely so the decision is evidence-gated.
+**DO:** run `python3 live_harness.py` when a paper lock opens; fill manually; the gate fires
+LOUD (arb_track GRADUATE alert) when combined n hits 30 with CI>0.
