@@ -95,14 +95,19 @@ def _fetch_candles(symbol: str, limit: int = 100) -> list[float]:
         return [float(c[4]) for c in data]  # close prices
 
     try:
-        closes = load_candles_or_fetch(
+        raw = load_candles_or_fetch(
             symbol, "15m",
             binance_fetcher=_binance_fetch,
             log_prefix="[candle_signals] ",
         )
-        return closes
+        if not raw:
+            return []
+        if isinstance(raw[0], list):
+            return [float(r[4]) for r in raw]
+        return [float(r) for r in raw]
     except Exception as e:
         sys.stderr.write(f"[candle_signals] fetch {symbol} failed: {e}\n")
+        return []
         return []
 
 

@@ -95,6 +95,28 @@ def boot_ci(xs, n=2000, seed=0):
     return (means[int(0.025 * n)], means[int(0.975 * n)])
 
 
+def dw_mean(edges, usd):
+    """Dollar-weighted edge per share: Σ(usd*edge)/Σusd. Weights each bet by its notional."""
+    if not edges:
+        return float("nan")
+    tw = sum(usd); 
+    return sum(e * w for e, w in zip(edges, usd)) / tw if tw > 0 else float("nan")
+
+
+def dw_boot_ci(edges, usd, n=2000, seed=7):
+    """Bootstrap CI on the DOLLAR-WEIGHTED mean (resample bets, weight by usd)."""
+    if len(edges) < 2:
+        return (float("nan"), float("nan"))
+    rnd = random.Random(seed); m = len(edges)
+    means = []
+    for _ in range(n):
+        idx = [rnd.randrange(m) for _ in range(m)]
+        es = [edges[i] for i in idx]; ws = [usd[i] for i in idx]
+        means.append(dw_mean(es, ws))
+    means.sort()
+    return (means[int(0.025 * n)], means[int(0.975 * n)])
+
+
 _rescache = {}
 def _load_cache():
     global _rescache
@@ -130,7 +152,7 @@ def settle(cid, oi):
     return 1.0 if win == oi else 0.0
 
 
-def _report(label, edges, raws, ctrls, haircut):
+def _report(label, edges, raws, ctrls, haircut, usd=None):
     if not edges:
         print(f"  [{label}] no resolved bets"); return
     mc = statistics.mean(edges); lo, hi = boot_ci(edges); mr = statistics.mean(raws)
@@ -138,6 +160,10 @@ def _report(label, edges, raws, ctrls, haircut):
     print(f"  [{label}]  n={len(edges)}")
     print(f"     raw whale edge/share (no haircut):  {mr:+.4f}")
     print(f"     COPY edge/share (haircut {haircut}):   {mc:+.4f}   95% CI [{lo:+.4f}, {hi:+.4f}]")
+    if usd:
+        dw = dw_mean(edges, usd); dlo, dhi = dw_boot_ci(edges, usd)
+        tot = sum(usd)
+        print(f"     $ COPY edge/share ($-weighted, {tot:,.0f} notional): {dw:+.4f}   95% CI [{dlo:+.4f}, {dhi:+.4f}]")
     print(f"     control (random side @ same probs):  {cm:+.4f}")
     if len(edges) >= 30 and lo > 0 and mc > cm:
         print(f"     VERDICT: ✅ CLEARS 0 at n>=30 (CI>0), beats control by {mc-cm:+.4f} — promote to gated leg")
@@ -159,15 +185,15 @@ def run(wallets, haircut, min_usd, pages, band):
     # PASS 2: parallel-resolve unique markets on-chain (the expensive part, batched)
     resolve_all(all_cids)
 
-    allp = {"e": [], "r": [], "c": []}
-    midp = {"e": [], "r": [], "c": []}
+    allp = {"e": [], "r": [], "c": [], "u": []}
+    midp = {"e": [], "r": [], "c": [], "u": []}
     rnd = random.Random(42)
     print(f"\ncopyable = entry price + haircut < 0.99 (can't buy a favorite above $1); "
           f"midband = entry in [{lo_b},{hi_b}] (real uncertainty, not 0.99-padding/lottery-dust)\n")
-    print(f"{'wallet':<14} {'bets':>5} {'reslvd':>6} {'mid-n':>6} {'rawAll':>8} {'copyAll':>8} {'copyMid':>8}")
+    print(f"{'wallet':<14} {'bets':>5} {'reslvd':>6} {'mid-n':>6} {'rawAll':>8} {'copyAll':>8} {'copyMid':>8} {'$copyAll':>8}")
     for w in wallets:
         bets = wbets[w]
-        we, wr_, wmid = [], [], []
+        we, wr_, wmid, wusd = [], [], [], []
         for b in bets:
             p = b["price"]
             if p + haircut >= 0.99:           # uncopyable: a copier can't pay >~$1 for a near-certain favorite
@@ -177,24 +203,65 @@ def run(wallets, haircut, min_usd, pages, band):
                 continue
             raw = term - p; cop = term - (p + haircut)
             ctrl = (1.0 if rnd.random() < p else 0.0) - (p + haircut)
-            allp["e"].append(cop); allp["r"].append(raw); allp["c"].append(ctrl); we.append(cop); wr_.append(raw)
+            u = b["usd"]
+            allp["e"].append(cop); allp["r"].append(raw); allp["c"].append(ctrl); allp["u"].append(u)
+            we.append(cop); wr_.append(raw); wusd.append(u)
             if lo_b <= p <= hi_b:
-                midp["e"].append(cop); midp["r"].append(raw); midp["c"].append(ctrl); wmid.append(cop)
+                midp["e"].append(cop); midp["r"].append(raw); midp["c"].append(ctrl); midp["u"].append(u)
+                wmid.append(cop)
         if we:
+            wdw = dw_mean(we, wusd)
+            dlo, dhi = dw_boot_ci(we, wusd)
+            mark = "  ^PROMOTABLE" if (len(we) >= 30 and dlo > 0) else ""
             print(f"{w[:12]:<14} {len(bets):>5} {len(we):>6} {len(wmid):>6} "
                   f"{statistics.mean(wr_):>+7.3f} {statistics.mean(we):>+7.3f} "
-                  f"{(statistics.mean(wmid) if wmid else float('nan')):>+7.3f}")
+                  f"{(statistics.mean(wmid) if wmid else float('nan')):>+7.3f} {wdw:>+7.3f}{mark}")
         else:
-            print(f"{w[:12]:<14} {len(bets):>5} {0:>6} {0:>6} {'--':>7} {'--':>7} {'--':>7}")
+            print(f"{w[:12]:<14} {len(bets):>5} {0:>6} {0:>6} {'--':>7} {'--':>7} {'--':>7} {'--':>7}")
         time.sleep(0.4)
 
     print("\n" + "=" * 70)
     print("POOLED — ALL copyable slow-market bets (incl. mid-favorites <0.99):")
-    _report("all-copyable", allp["e"], allp["r"], allp["c"], haircut)
+    _report("all-copyable", allp["e"], allp["r"], allp["c"], haircut, usd=allp["u"])
     print(f"\nPOOLED — GENUINE-UNCERTAINTY band [{lo_b},{hi_b}] (the only place copy info can matter):")
-    _report(f"midband", midp["e"], midp["r"], midp["c"], haircut)
+    _report("midband", midp["e"], midp["r"], midp["c"], haircut, usd=midp["u"])
     print("\nReading: if the edge lives ONLY in all-copyable but dies in midband, it's residual")
     print("favorite-padding (uncopyable / gap-fragile), not information. The midband line is the real test.")
+
+    print("\nPER-WALLET verdict (by their actual trading + dollars, not pooled):")
+    print(f"{'wallet':<14} {'n':>4} {'$notional':>10} {'$edge/$':>8} {'dlo':>6} {'dhi':>6}  verdict")
+    holds = []
+    for w in wallets:
+        bets = wbets[w]
+        we, wusd = [], []
+        for b in bets:
+            p = b["price"]
+            if p + haircut >= 0.99:
+                continue
+            term = settle(b["cid"], b["oi"])
+            if term is None:
+                continue
+            u = b["usd"]
+            we.append(term - (p + haircut)); wusd.append(u)
+        if len(we) < 5:
+            continue
+        dlo, dhi = dw_boot_ci(we, wusd)
+        wdw = dw_mean(we, wusd)
+        tot = sum(wusd)
+        if len(we) >= 30 and dlo > 0:
+            v = "🎯 PROMOTABLE"
+            holds.append(w)
+        elif dhi > 0:
+            v = "🟡 accumulate"
+        else:
+            v = "❌ bury"
+        print(f"{w[:12]:<14} {len(we):>4} {tot:>10,.0f} {wdw:>+8.4f} {dlo:>+6.3f} {dhi:>+6.3f}  {v}")
+    if holds:
+        print(f"\nWallets clearing the dollar-weighted bar (n>=30, CI>0): {len(holds)}")
+        for w in holds:
+            print(f"  {w}")
+    else:
+        print("\nNO wallet clears the dollar-weighted bar (n>=30, CI>0) — family buried on $.")
 
 
 if __name__ == "__main__":

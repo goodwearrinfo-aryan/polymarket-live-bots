@@ -21,7 +21,7 @@ import concept_shadow_refresh as css   # reuse its corpus staging
 
 HOME = Path.home()
 GFY = "/Users/aryanagarwal/.local/share/uv/tools/graphifyy/bin/graphify"
-MODEL = "meta/llama-4-maverick-17b-128e-instruct"
+MODEL = "nvidia/nemotron-3-ultra-550b-a55b"   # maverick EOL 2026-07-27 (410); nvultra is the live replacement
 NVBASE = "https://integrate.api.nvidia.com/v1"
 REAL = HOME / "Documents/PolymarketVault/ConceptGraph/graphify-out/graph.json"
 STAGE = Path("/tmp/brain_rebuild_nv_stage")   # OWN dir — never share /tmp/concept_shadow (race: both fire 04:30)

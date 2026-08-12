@@ -22,18 +22,24 @@ Paper research only. Reads public data; places no orders.
 import urllib.request, urllib.parse, json, re, datetime, time, sys, random, math
 
 UA = "Mozilla/5.0 (coin-updown-backtest research)"
-GAMMA = "https://gamma-api.polymarket.com/markets"
+# 2026-08-12: gamma's /markets listing DELISTED the 5-min "Up or Down" virtual
+# markets, but /events?slug=<coin>-updown-<suffix>-<epoch> still serves them with
+# full outcomePrices. The <epoch> is the window start (seconds). Discovery is now
+# a deterministic slug enumeration over the window, per coin x suffix.
+GAMMA = "https://gamma-api.polymarket.com/events"
 CLOB  = "https://clob.polymarket.com/prices-history"
-COIN_RE = re.compile(r'\b(bitcoin|btc|ethereum|eth|bnb|solana|sol|xrp|ripple|dogecoin|doge)\b', re.I)
+COIN_SLUGS = [("btc","bitcoin"), ("eth","ethereum"), ("sol","solana"),
+              ("xrp","xrp"), ("doge","dogecoin"), ("bnb","bnb")]  # (slug, canonical)
 UD_RE   = re.compile(r'up or down', re.I)
 
 # ── knobs ────────────────────────────────────────────────────────────────────
 DAYS_BACK     = float(sys.argv[1]) if len(sys.argv) > 1 else 21.0   # date window
-MAX_LIST_PAGES= 60          # 100 markets/page scanned for the cheap base-rate phase
-MAX_PRICED    = 700         # cap markets we fetch price-history for (phase B runtime)
-LEAD_SEC      = 120         # "late" entry: this many seconds before close
-SPREAD        = 0.02        # round-trip spread haircut (you buy at mid + SPREAD/2)
-PACE          = 0.18        # seconds between requests (under CLOB caps)
+SUFFIXES      = ["15m"] if len(sys.argv) < 3 else [sys.argv[2]]   # horizons (15m|5m)
+MAX_EVENTS    = 12000            # safety cap on event slugs probed (21d x 15m = ~10k)
+MAX_PRICED    = 700             # cap markets we fetch price-history for (phase B runtime)
+LEAD_SEC      = 120             # "late" entry: this many seconds before close
+SPREAD        = 0.02            # round-trip spread haircut (you buy at mid + SPREAD/2)
+PACE          = 0.05            # seconds between requests (light /events?slug probes)
 TIMEOUT       = 25
 _last = [0.0]
 
@@ -55,7 +61,7 @@ def get(url, params=None):
     return None
 
 def coin_of(q):
-    m = COIN_RE.search(q)
+    m = re.search(r'\b(bitcoin|btc|ethereum|eth|solana|sol|xrp|ripple|dogecoin|doge|bnb)\b', q, re.I)
     if not m: return "other"
     k = m.group(1).lower()
     return {"btc":"bitcoin","eth":"ethereum","sol":"solana","ripple":"xrp","doge":"dogecoin"}.get(k, k)
@@ -64,27 +70,57 @@ def jparse(x):
     try: return json.loads(x) if isinstance(x, str) else x
     except Exception: return None
 
+def slug_epochs(suffix, days):
+    """Epoch grid (window starts, UTC seconds) covering the last `days`."""
+    step = {"15m": 900, "5m": 300}[suffix]
+    now_ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+    # align to grid; start ~days back, stop ~now (window start must precede now)
+    first = ((now_ts - int(days*86400)) // step) * step
+    last  = ((now_ts) // step) * step
+    return list(range(first, last + 1, step))
+
 # ── Phase A: collect resolved crypto up/down markets (outcomes only) ──────────
 now = datetime.datetime.now(datetime.timezone.utc)
 dmin = (now - datetime.timedelta(days=DAYS_BACK)).strftime("%Y-%m-%dT%H:%M:%SZ")
 dmax = (now + datetime.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
-print(f"[collect] window {dmin} .. {dmax}  (up to {MAX_LIST_PAGES} pages)")
+print(f"[collect] window {dmin} .. {dmax}  via /events?slug=<coin>-updown-<suffix>-<epoch>",
+      flush=True)
+
+# parallel slug probe — the /events?slug endpoint is light; thread it (like
+# whale_drift/OOS do for bulk fetches). Each probe is independent.
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+slugs = []
+for slug, _ in COIN_SLUGS:
+    for suffix in SUFFIXES:
+        for ep in slug_epochs(suffix, DAYS_BACK):
+            if len(slugs) >= MAX_EVENTS: break
+            slugs.append(f"{slug}-updown-{suffix}-{ep}")
+        if len(slugs) >= MAX_EVENTS: break
+    if len(slugs) >= MAX_EVENTS: break
+
+def probe(s):
+    d = get(GAMMA, {"slug": s})
+    return s, (d or [])
 
 mkts = {}   # condition_id -> market (dedup)
-for pg in range(MAX_LIST_PAGES):
-    d = get(GAMMA, {"closed":"true","limit":100,"offset":pg*100,
-                    "end_date_min":dmin,"end_date_max":dmax,
-                    "order":"endDate","ascending":"false"})
-    if not d: break
-    for m in d:
-        q = m.get("question","")
-        if UD_RE.search(q) and COIN_RE.search(q):
-            mkts[m.get("conditionId") or m.get("condition_id") or q] = m
-    if len(d) < 100: break
-    if pg % 10 == 9: print(f"  ...page {pg+1}, crypto up/down so far: {len(mkts)}")
+probed = 0
+WORKERS = 12
+with ThreadPoolExecutor(max_workers=WORKERS) as ex:
+    for s, evs in ex.map(probe, slugs):
+        probed += 1
+        for ev in evs:
+            for m in ev.get("markets", []) or []:
+                q = m.get("question","")
+                if UD_RE.search(q):
+                    mkts[m.get("conditionId") or m.get("condition_id") or q] = m
+        if probed % 2000 == 0:
+            print(f"  ...{probed}/{len(slugs)} probed, {len(mkts)} up/down so far", flush=True)
+
+print(f"[collect] probed {probed} slug-epoch combos -> {len(mkts)} crypto up/down markets",
+      flush=True)
 
 ud = list(mkts.values())
-print(f"[collect] resolved crypto up/down markets: {len(ud)}")
 if len(ud) < 30:
     print("[abort] too few markets to say anything honest (need >=30). Network may be flaky; retry.")
     sys.exit(0)
@@ -107,7 +143,8 @@ def wilson(k, n, z=1.96):
     return (c-h, c+h)
 
 n = len(rows); up = sum(r["yes_won"] for r in rows)
-lo, hi = wilson(up, n)
+P_A = wilson(up, n)          # capture the base-rate CI BEFORE phase B clobbers lo/hi
+lo, hi = P_A
 print("\n================= PHASE A: BASE RATE (Up vs Down) =================")
 print(f"  N = {n} resolved crypto up/down markets")
 print(f"  P(Up resolves YES) = {up/n:.4f}   Wilson 95% CI [{lo:.4f}, {hi:.4f}]")
@@ -204,7 +241,16 @@ for b in sorted(buck):
     if t>=10: print(f"    fav price ~{b:.2f}: won {w/t:.2f} (n={t})  gap {w/t-b:+.2f}")
 
 out={"generated_for":"coin up/down honest backtest","window_days":DAYS_BACK,
-     "n_baserate":n,"p_up":up/n,"p_up_ci":[lo,hi],
+     "n_baserate":n,"p_up":up/n,"p_up_ci":list(P_A),
      "n_priced":len(samples),"spread":SPREAD,"lead_sec":LEAD_SEC}
+# per-strategy EV (bonus honesty: CI per strategy, not just the last one)
+out["strategies"] = {}
+for label, ek, mode in [("always_YES","late_yes","yes"),("always_NO","late_yes","no"),
+                        ("buy_fav_open","open_yes","fav"),("fade_fav_open","open_yes","fade"),
+                        ("buy_fav_late","late_yes","fav"),("fade_fav_late","late_yes","fade")]:
+    xs = strat_pnl(samples, ek, mode)
+    if xs:
+        m_, l_, h_ = boot_ci(xs)
+        out["strategies"][label] = {"n":len(xs),"mean":round(m_,5),"ci":[round(l_,5),round(h_,5)]}
 json.dump(out, open("coin_updown_backtest.json","w"), indent=2)
 print("\n[done] summary -> coin_updown_backtest.json")
