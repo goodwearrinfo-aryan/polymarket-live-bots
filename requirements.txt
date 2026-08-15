@@ -1,7 +1,7 @@
 # Autonomous paper-bot deps (live legs + watchdog are stdlib-only; these power the
 # main bot, the daily PDF/email report, and the nightly ML retrain).
 requests>=2.31.0
-reportlab>=4.0.0
+reportlab>=5.0.0
 numpy>=1.26.0
 scikit-learn>=1.3.0
 # Only needed if/when you place REAL orders (paper-gated; not used by the paper stack):
